@@ -2,12 +2,18 @@ import streamlit as st
 import pickle
 import numpy as np
 import pandas as pd
+import os
 
-# Load the model and dataset
-pipe = pickle.load(open('pipe.pkl', 'rb'))
-df = pickle.load(open('df.pkl', 'rb'))
+# Fix path issue (IMPORTANT for Render)
+BASE_DIR = os.path.dirname(__file__)
 
-st.title("Laptop Predictor")
+# Load model
+pipe = pickle.load(open(os.path.join(BASE_DIR, 'pipe.pkl'), 'rb'))
+
+# 🔥 FIX: Load CSV instead of pickle
+df = pd.read_csv(os.path.join(BASE_DIR, 'laptop_data.csv'))
+
+st.title("Laptop Price Predictor 💻")
 
 # Brand
 company = st.selectbox('Brand', df['Company'].unique())
@@ -33,7 +39,8 @@ screen_size = st.slider('Screen Size (in inches)', 10.0, 18.0, 13.0)
 # Resolution
 resolution = st.selectbox('Screen Resolution', [
     '1920x1080', '1366x768', '1600x900', '3840x2160', '3200x1800',
-    '2880x1800', '2560x1600', '2560x1440', '2304x1440'])
+    '2880x1800', '2560x1600', '2560x1440', '2304x1440'
+])
 
 # CPU
 cpu = st.selectbox('CPU', df['Cpu brand'].unique())
@@ -48,40 +55,35 @@ ssd = st.selectbox('SSD (in GB)', [0, 8, 128, 256, 512, 1024])
 gpu = st.selectbox('GPU', df['Gpu brand'].unique())
 
 # Operating System
-os = st.selectbox('OS', df['os'].unique())
+os_type = st.selectbox('OS', df['os'].unique())
 
 if st.button('Predict Price'):
     # Process inputs
-    touchscreen = 1 if touchscreen == 'Yes' else 0
-    ips = 1 if ips == 'Yes' else 0
+    touchscreen_val = 1 if touchscreen == 'Yes' else 0
+    ips_val = 1 if ips == 'Yes' else 0
 
     X_res = int(resolution.split('x')[0])
     Y_res = int(resolution.split('x')[1])
     ppi = ((X_res ** 2) + (Y_res ** 2)) ** 0.5 / screen_size
 
-    # Create query as a DataFrame
-    query_dict = {
+    # Create query DataFrame
+    query = pd.DataFrame({
         'Company': [company],
         'TypeName': [type],
         'Ram': [ram],
         'Weight': [weight],
-        'Touchscreen': [touchscreen],
-        'Ips': [ips],
-        'ppi': [ppi],  # Ensure this matches the model column name
+        'Touchscreen': [touchscreen_val],
+        'Ips': [ips_val],
+        'ppi': [ppi],
         'Cpu brand': [cpu],
-        'HDD': [hdd],  # Corrected column name
-        'SSD': [ssd],  # Corrected column name
+        'HDD': [hdd],
+        'SSD': [ssd],
         'Gpu brand': [gpu],
-        'os': [os],
-    }
-
-    query_df = pd.DataFrame(query_dict)
+        'os': [os_type]
+    })
 
     try:
-        # Predict the price
-        predicted_price = np.exp(pipe.predict(query_df)[0])
-        st.title(f"The predicted price of this configuration is ₹{int(predicted_price)}")
-    except ValueError as e:
-        st.error(f"Error in prediction: {e}")
-
-#streamlit run app.py
+        predicted_price = np.exp(pipe.predict(query)[0])
+        st.success(f"💰 Predicted Price: ₹{int(predicted_price)}")
+    except Exception as e:
+        st.error(f"Error: {e}")
