@@ -22,9 +22,6 @@ Thumbs.db
 # Logs
 *.log
 
-# Large files (optional)
-*.pkl
-*.joblib
 
 # IDE
 .vscode/
